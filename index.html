@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Auto Ledger Private MVP</title>
+    <meta name="theme-color" content="#087f8c" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Auto Ledger" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" href="./icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="./icon.svg" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="device">
+        <div class="phone">
+          <header class="phone-header">
+            <div>
+              <p class="eyebrow">Private wallet ledger</p>
+              <h1>Auto Ledger</h1>
+            </div>
+            <button class="icon-button" id="walletDemoButton" title="Wallet取引を受信">
+              <span aria-hidden="true">↓</span>
+            </button>
+          </header>
+
+          <section class="balance-strip" aria-label="今月の集計">
+            <div>
+              <span>今月の支出</span>
+              <strong id="monthTotal">¥0</strong>
+            </div>
+            <div>
+              <span>自動/半自動</span>
+              <strong id="autoCount">0件</strong>
+            </div>
+          </section>
+
+          <section class="category-board" aria-label="カテゴリ別支出">
+            <div class="panel-title">
+              <h2>カテゴリ別</h2>
+              <span id="privacyState">端末内のみ</span>
+            </div>
+            <div id="categorySummary" class="category-summary"></div>
+          </section>
+
+          <section class="capture-panel">
+            <div class="panel-title">
+              <h2>Wallet自動取り込み</h2>
+              <span id="connectionState">ショートカット待機中</span>
+            </div>
+            <p class="hint">iOSショートカットの取引トリガーから届く金額・店舗名・カード名を想定しています。</p>
+            <div class="pay-grid" id="walletButtons" aria-label="Wallet決済">
+              <button data-provider="QUICPay">QUICPay</button>
+              <button data-provider="iD">iD</button>
+              <button data-provider="Suica">Suica</button>
+              <button data-provider="PASMO">PASMO</button>
+            </div>
+
+            <form id="walletForm">
+              <label>
+                店舗
+                <input id="walletMerchantInput" name="merchant" value="コンビニ 渋谷三丁目" autocomplete="off" />
+              </label>
+              <label>
+                金額
+                <input id="walletAmountInput" name="amount" type="number" min="1" value="680" />
+              </label>
+              <button type="submit">Wallet取引を受信</button>
+            </form>
+            <p class="hint url-hint">ショートカットURL: <code id="shortcutUrlPreview"></code></p>
+          </section>
+
+          <section class="capture-panel">
+            <div class="panel-title">
+              <h2>QR決済の半自動入力</h2>
+              <span class="muted-label">PayPayなど</span>
+            </div>
+            <form id="qrForm">
+              <label>
+                通知/レシート文
+                <textarea id="qrTextInput" spellcheck="false">PayPayで680円を支払いました
+店舗: コンビニ 渋谷三丁目</textarea>
+              </label>
+              <button type="submit">通知文から候補を作る</button>
+            </form>
+          </section>
+
+          <section class="feed">
+            <div class="panel-title">
+              <h2>家計簿ログ</h2>
+              <button class="text-button" id="clearButton">クリア</button>
+            </div>
+            <ul id="ledgerList" aria-live="polite"></ul>
+          </section>
+        </div>
+      </section>
+
+      <aside class="desktop-panel">
+        <div class="workflow">
+          <h2>保存設計</h2>
+          <ol>
+            <li>
+              <strong>端末内暗号化を標準</strong>
+              <span>取引の店舗名・金額・時刻は個人情報に近いので、標準ではサーバーへ送らず端末内に暗号化保存。</span>
+            </li>
+            <li>
+              <strong>同期は明示オプトイン</strong>
+              <span>複数端末同期はユーザーが選んだ場合だけ。同期データも暗号化済みの塊として扱う。</span>
+            </li>
+            <li>
+              <strong>分類はローカル優先</strong>
+              <span>店舗名ルール、手動修正、カテゴリ学習は端末内で完結。外部AIへ明細を送らない設計にする。</span>
+            </li>
+            <li>
+              <strong>共有するなら集計のみ</strong>
+              <span>分析やバックアップに使う場合も、店舗名を含む生データではなくカテゴリ別合計などに限定。</span>
+            </li>
+          </ol>
+        </div>
+
+        <div class="vault-card">
+          <h2>暗号化保存の試作</h2>
+          <p>このブラウザ版では、パスフレーズから鍵を作り、取引データを暗号化してlocalStorageへ保存します。</p>
+          <label>
+            パスフレーズ
+            <input id="passphraseInput" type="password" autocomplete="new-password" placeholder="8文字以上を推奨" />
+          </label>
+          <div class="vault-actions">
+            <button id="saveVaultButton">暗号化して保存</button>
+            <button id="loadVaultButton">復元</button>
+          </div>
+          <p id="vaultStatus" class="status-line">未保存</p>
+        </div>
+
+        <div class="shortcut-card">
+          <h2>ショートカットから送るJSON</h2>
+          <p>実機ではショートカットの「URLの内容を取得」で、この形式をアプリ/サーバーにPOSTします。</p>
+          <pre id="shortcutPayload"></pre>
+        </div>
+
+        <div class="stats">
+          <div>
+            <span>重複除外</span>
+            <strong id="duplicateCount">0</strong>
+          </div>
+          <div>
+            <span>分類済み</span>
+            <strong id="classifiedRate">0%</strong>
+          </div>
+          <div>
+            <span>確認待ち</span>
+            <strong id="reviewCount">0</strong>
+          </div>
+        </div>
+
+        <div class="import-box">
+          <h2>CSV明細インポート</h2>
+          <p>PayPayや交通系ICの明細を貼り付けると、一括で候補登録します。</p>
+          <textarea id="csvInput" spellcheck="false">Suica,JR 新宿駅,198,交通費
+PayPay,ドラッグストア 青山,1420,日用品
+QUICPay,カフェ 表参道,620,カフェ</textarea>
+          <button id="importButton">CSVを取り込む</button>
+        </div>
+      </aside>
+    </main>
+
+    <template id="ledgerItemTemplate">
+      <li class="ledger-item">
+        <div class="provider-badge"></div>
+        <div class="ledger-main">
+          <div class="ledger-topline">
+            <strong class="merchant"></strong>
+            <span class="category"></span>
+          </div>
+          <p class="meta"></p>
+          <label class="category-edit">
+            カテゴリ
+            <select class="category-select"></select>
+          </label>
+        </div>
+        <strong class="amount"></strong>
+      </li>
+    </template>
+
+    <script src="./app.js"></script>
+  </body>
+</html>

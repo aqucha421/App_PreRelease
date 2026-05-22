@@ -1,0 +1,18 @@
+{
+  "name": "Auto Ledger",
+  "short_name": "Ledger",
+  "description": "Walletタッチ決済とQR決済をローカル優先で記録する家計簿PWA",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#eef3f8",
+  "theme_color": "#087f8c",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -4,7 +4,7 @@ const formatter = new Intl.NumberFormat("ja-JP", {
   maximumFractionDigits: 0,
 });
 
-const APP_VERSION = "v0.9.6";
+const APP_VERSION = "v0.9.7";
 
 const categories = ["食費", "交通費", "カフェ", "日用品", "医療", "娯楽", "固定費", "未分類"];
 
@@ -76,7 +76,7 @@ let merchantCategoryMemory = {};
 let unlockedPassphrase = "";
 let autoSaveTimer = 0;
 const debugMode = new URLSearchParams(window.location.search).get("debug") === "1";
-const localStateKey = debugMode ? "auto-ledger-debug-state" : "";
+const localStateKey = debugMode ? "auto-ledger-debug-state" : "auto-ledger-local-state";
 const budgetStateKey = "auto-ledger-category-budgets";
 const customRuleStateKey = "auto-ledger-custom-category-rules";
 const sponsorStateKey = "auto-ledger-sponsor-visible";
@@ -1901,9 +1901,9 @@ function buildPublishChecks() {
     {
       id: "version",
       label: "バージョン更新",
-      ok: APP_VERSION === "v0.9.6",
+      ok: APP_VERSION === "v0.9.7",
       blocker: true,
-      detail: `${APP_VERSION} / PWA cache v33`,
+      detail: `${APP_VERSION} / PWA cache v34`,
       fix: "index.html、app.js、sw.jsのバージョンとキャッシュ名を更新します。",
     },
     {
@@ -1935,7 +1935,7 @@ function buildPublishChecks() {
       label: "iPhone最新版反映",
       ok: true,
       blocker: false,
-      detail: "push後はiPhoneで「最新版に更新」を押して v0.9.6 表示を確認します。",
+      detail: "push後はiPhoneで「最新版に更新」を押して v0.9.7 表示を確認します。",
       fix: "push後にSafariまたはホーム画面アプリで最新版に更新します。",
     },
     {
@@ -2034,9 +2034,9 @@ function buildPushAuditChecks() {
     {
       id: "static-check",
       label: "静的チェック",
-      ok: APP_VERSION === "v0.9.6",
+      ok: APP_VERSION === "v0.9.7",
       blocker: true,
-      detail: `${APP_VERSION} / cache v33 / JS構文チェック対象`,
+      detail: `${APP_VERSION} / cache v34 / JS構文チェック対象`,
       fix: "push前に node --check app.js と node --check debug-iphone.js を通します。",
     },
     {
@@ -2084,7 +2084,7 @@ function buildPushAuditChecks() {
       label: "push後確認",
       ok: false,
       blocker: false,
-      detail: "push後にiPhoneで最新版へ更新し、v0.9.6表示と固定URL追加を確認します。",
+      detail: "push後にiPhoneで最新版へ更新し、v0.9.7表示と固定URL追加を確認します。",
       fix: "push後の実機確認項目です。完了後に公開前チェックとセルフ監査を再実行します。",
     },
   ];
@@ -2175,7 +2175,7 @@ function buildPushPrepSteps() {
     {
       id: "static-check",
       label: "構文確認",
-      ok: APP_VERSION === "v0.9.6",
+      ok: APP_VERSION === "v0.9.7",
       blocker: true,
       title: "JS構文チェックを通す",
       detail: "node --check app.js / node --check debug-iphone.js を通します。",
@@ -2214,7 +2214,7 @@ function buildPushPrepSteps() {
       ok: false,
       blocker: false,
       title: "iPhoneで最新版を確認",
-      detail: "push後にiPhoneで最新版に更新し、v0.9.6表示、固定URL追加、ホーム画面起動を確認します。",
+      detail: "push後にiPhoneで最新版に更新し、v0.9.7表示、固定URL追加、ホーム画面起動を確認します。",
       fix: "反映後の実機確認として残します。",
     },
   ];
@@ -2386,7 +2386,7 @@ function buildFinalPushSteps() {
       ok: false,
       blocker: false,
       title: "iPhoneで反映確認する",
-      detail: "Pages URLを開き、最新版更新、v0.9.6表示、固定URL追加、ホーム画面起動を確認します。",
+      detail: "Pages URLを開き、最新版更新、v0.9.7表示、固定URL追加、ホーム画面起動を確認します。",
       fix: "push後の実機確認として残します。",
     },
   ];
@@ -2444,7 +2444,7 @@ function finalPushText() {
     "git push",
     "",
     "6. iPhone確認",
-    "Pages URLを開く -> 最新版に更新 -> v0.9.6表示 -> 固定URL追加 -> ホーム画面起動",
+    "Pages URLを開く -> 最新版に更新 -> v0.9.7表示 -> 固定URL追加 -> ホーム画面起動",
     "",
     "注意: JSONバックアップ、CSV、スクリーンショット、取引明細、個人メモ、認証情報はstageしないでください。",
   ].join("\n");

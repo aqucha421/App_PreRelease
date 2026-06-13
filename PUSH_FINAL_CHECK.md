@@ -35,6 +35,7 @@ git push
 
 - Open the GitHub Pages URL, not the GitHub file page
 - Refresh to the latest version
-- Confirm the app shows `v0.9.6`
+- Confirm the app shows `v0.9.7`
 - Run the fixed URL test
+- Close and reopen the app, then confirm the added transaction remains
 - Open from the Home Screen icon

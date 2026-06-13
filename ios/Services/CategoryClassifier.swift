@@ -2,9 +2,11 @@ import Foundation
 
 struct CategoryClassifier {
     private let memory: [String: LedgerCategory]
+    private let customRules: [CustomCategoryRule]
 
-    init(memory: [String: LedgerCategory] = [:]) {
+    init(memory: [String: LedgerCategory] = [:], customRules: [CustomCategoryRule] = []) {
         self.memory = memory
+        self.customRules = customRules
     }
 
     func classify(merchant: String, memo: String = "", fallback: LedgerCategory? = nil) -> LedgerCategory {
@@ -13,6 +15,13 @@ struct CategoryClassifier {
         }
 
         let text = "\(merchant) \(memo)"
+
+        if let customRule = customRules.first(where: {
+            !$0.keyword.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+            text.localizedCaseInsensitiveContains($0.keyword)
+        }) {
+            return customRule.category
+        }
 
         if let remembered = memory.first(where: { text.localizedCaseInsensitiveContains($0.key) }) {
             return remembered.value

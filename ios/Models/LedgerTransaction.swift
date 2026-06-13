@@ -2,6 +2,10 @@ import Foundation
 
 enum PaymentProvider: String, CaseIterable, Codable, Identifiable {
     case payPay = "PayPay"
+    case rakutenPay = "楽天ペイ"
+    case dBarai = "d払い"
+    case auPay = "au PAY"
+    case merPay = "メルペイ"
     case quicPay = "QUICPay"
     case iD = "iD"
     case suica = "Suica"
@@ -13,6 +17,10 @@ enum PaymentProvider: String, CaseIterable, Codable, Identifiable {
     var shortName: String {
         switch self {
         case .payPay: return "Pay"
+        case .rakutenPay: return "楽"
+        case .dBarai: return "d"
+        case .auPay: return "au"
+        case .merPay: return "メ"
         case .quicPay: return "QP"
         case .iD: return "iD"
         case .suica: return "Su"
@@ -84,4 +92,29 @@ struct CategoryTotal: Identifiable {
     let amount: Int
 
     var id: String { category.rawValue }
+}
+
+struct CustomCategoryRule: Identifiable, Codable, Equatable {
+    var id: UUID
+    var keyword: String
+    var category: LedgerCategory
+
+    init(id: UUID = UUID(), keyword: String, category: LedgerCategory) {
+        self.id = id
+        self.keyword = keyword
+        self.category = category
+    }
+}
+
+struct CategoryBudget: Identifiable, Codable, Equatable {
+    var category: LedgerCategory
+    var monthlyLimit: Int
+
+    var id: String { category.rawValue }
+}
+
+struct LedgerSettings: Codable, Equatable {
+    var sponsorVisible: Bool
+
+    static let defaultValue = LedgerSettings(sponsorVisible: true)
 }

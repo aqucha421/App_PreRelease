@@ -4,13 +4,21 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Auto Ledger Private MVP</title>
+    <meta
+      name="description"
+      content="タッチ決済とQR決済の支払い記録を、できるだけ手入力なしで残す個人用PWAです。"
+    />
     <meta name="theme-color" content="#087f8c" />
+    <meta name="color-scheme" content="light" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Auto Ledger" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="icon" href="./icon.svg" type="image/svg+xml" />
-    <link rel="apple-touch-icon" href="./icon.svg" />
+    <link rel="apple-touch-icon" href="./icon-192.png" />
+    <link rel="apple-touch-icon" sizes="512x512" href="./icon-512.png" />
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
@@ -21,9 +29,10 @@
             <div>
               <p class="eyebrow">Private wallet ledger</p>
               <h1>Auto Ledger</h1>
+              <span class="app-version" id="appVersionLabel">v0.9.6</span>
             </div>
-            <button class="icon-button" id="walletDemoButton" title="Wallet取引を受信">
-              <span aria-hidden="true">↓</span>
+            <button class="icon-button" id="walletDemoButton" title="サンプル取引を追加">
+              <span aria-hidden="true">+</span>
             </button>
           </header>
 
@@ -33,7 +42,7 @@
               <strong id="monthTotal">¥0</strong>
             </div>
             <div>
-              <span>自動/半自動</span>
+              <span>自動・半自動</span>
               <strong id="autoCount">0件</strong>
             </div>
           </section>
@@ -41,17 +50,19 @@
           <section class="category-board" aria-label="カテゴリ別支出">
             <div class="panel-title">
               <h2>カテゴリ別</h2>
-              <span id="privacyState">端末内のみ</span>
+              <span id="privacyState">端末内保存のみ</span>
             </div>
             <div id="categorySummary" class="category-summary"></div>
           </section>
 
           <section class="capture-panel">
             <div class="panel-title">
-              <h2>Wallet自動取り込み</h2>
+              <h2>Wallet取引を取り込む</h2>
               <span id="connectionState">ショートカット待機中</span>
             </div>
-            <p class="hint">iOSショートカットの取引トリガーから届く金額・店舗名・カード名を想定しています。</p>
+            <p class="hint">
+              iOSショートカットから届く支払い方法、店舗名、金額を想定したデバッグ入力です。
+            </p>
             <div class="pay-grid" id="walletButtons" aria-label="Wallet決済">
               <button data-provider="QUICPay">QUICPay</button>
               <button data-provider="iD">iD</button>
@@ -68,7 +79,7 @@
                 金額
                 <input id="walletAmountInput" name="amount" type="number" min="1" value="680" />
               </label>
-              <button type="submit">Wallet取引を受信</button>
+              <button type="submit">Wallet取引を追加</button>
             </form>
             <p class="hint url-hint">ショートカットURL: <code id="shortcutUrlPreview"></code></p>
           </section>
@@ -80,18 +91,23 @@
             </div>
             <form id="qrForm">
               <label>
-                通知/レシート文
+                通知文・レシート文
                 <textarea id="qrTextInput" spellcheck="false">PayPayで680円を支払いました
 店舗: コンビニ 渋谷三丁目</textarea>
               </label>
-              <button type="submit">通知文から候補を作る</button>
+              <div class="qr-samples" id="qrSampleButtons"></div>
+              <button type="submit">通知文から明細を作る</button>
             </form>
           </section>
 
           <section class="feed">
             <div class="panel-title">
               <h2>家計簿ログ</h2>
-              <button class="text-button" id="clearButton">クリア</button>
+              <div class="feed-actions">
+                <button class="text-button" id="showUncategorizedButton">未分類</button>
+                <button class="text-button" id="showAllButton">全件</button>
+                <button class="text-button" id="clearButton">クリア</button>
+              </div>
             </div>
             <ul id="ledgerList" aria-live="polite"></ul>
           </section>
@@ -103,41 +119,493 @@
           <h2>保存設計</h2>
           <ol>
             <li>
-              <strong>端末内暗号化を標準</strong>
-              <span>取引の店舗名・金額・時刻は個人情報に近いので、標準ではサーバーへ送らず端末内に暗号化保存。</span>
+              <strong>端末内暗号化を基本にする</strong>
+              <span>取引、店舗名、金額、時刻は個人情報に近いため、標準ではサーバーへ送らず端末内に保存します。</span>
             </li>
             <li>
-              <strong>同期は明示オプトイン</strong>
-              <span>複数端末同期はユーザーが選んだ場合だけ。同期データも暗号化済みの塊として扱う。</span>
+              <strong>同期は明示的に選ぶ</strong>
+              <span>複数端末同期は将来機能です。同期データも暗号化済みの塊として扱う方針です。</span>
             </li>
             <li>
               <strong>分類はローカル優先</strong>
-              <span>店舗名ルール、手動修正、カテゴリ学習は端末内で完結。外部AIへ明細を送らない設計にする。</span>
+              <span>店舗名ルール、手動修正、カテゴリ学習は端末内で完結します。外部AIへ明細を送りません。</span>
             </li>
             <li>
-              <strong>共有するなら集計のみ</strong>
-              <span>分析やバックアップに使う場合も、店舗名を含む生データではなくカテゴリ別合計などに限定。</span>
+              <strong>共有するなら集計だけ</strong>
+              <span>広告やバックアップに使う場合も、店舗名を含む生データではなくカテゴリ別集計などに限定します。</span>
             </li>
           </ol>
         </div>
 
+        <div class="onboarding-card">
+          <div class="section-heading">
+            <h2>初回セットアップ</h2>
+            <span class="muted-label" id="onboardingProgress">0/6</span>
+          </div>
+          <p>自分のiPhoneで使い始める前に、最低限の安全確認を順番に終わらせるチェックリストです。</p>
+          <div class="onboarding-list" id="onboardingList"></div>
+          <div class="vault-actions">
+            <button id="copyOnboardingStepsButton">手順をコピー</button>
+            <button id="resetOnboardingButton">リセット</button>
+          </div>
+          <p id="onboardingStatus" class="status-line">未開始</p>
+        </div>
+
         <div class="vault-card">
-          <h2>暗号化保存の試作</h2>
-          <p>このブラウザ版では、パスフレーズから鍵を作り、取引データを暗号化してlocalStorageへ保存します。</p>
+          <h2>暗号化保存のテスト</h2>
+          <p>パスフレーズで解除すると、以後の追加・分類変更は暗号化して自動保存します。</p>
           <label>
             パスフレーズ
             <input id="passphraseInput" type="password" autocomplete="new-password" placeholder="8文字以上を推奨" />
           </label>
           <div class="vault-actions">
-            <button id="saveVaultButton">暗号化して保存</button>
-            <button id="loadVaultButton">復元</button>
+            <button id="saveVaultButton">解除して保存</button>
+            <button id="loadVaultButton">解除して復元</button>
           </div>
           <p id="vaultStatus" class="status-line">未保存</p>
         </div>
 
+        <div class="diagnostic-card">
+          <h2>ショートカット診断</h2>
+          <p>Wallet取引トリガーが届いたか、まず固定URLで確認できます。</p>
+          <div class="diagnostic-grid">
+            <div>
+              <span>最終受信</span>
+              <strong id="lastIntakeStatus">未受信</strong>
+            </div>
+            <div>
+              <span>保存状態</span>
+              <strong id="autoSaveState">未解除</strong>
+            </div>
+          </div>
+          <div class="intake-history">
+            <strong>受信履歴</strong>
+            <ol id="intakeHistoryList"></ol>
+          </div>
+          <label>
+            テストURL
+            <input id="testUrlInput" readonly />
+          </label>
+          <div class="vault-actions">
+            <button id="openTestUrlButton">テスト追加</button>
+            <button id="copyTestUrlButton">コピー</button>
+          </div>
+          <div class="issue-helper">
+            <strong>追加されない時の切り分け</strong>
+            <ul id="issueChecklist"></ul>
+          </div>
+          <div class="vault-actions">
+            <button id="refreshAppButton">最新版に更新</button>
+            <button id="clearCacheButton">キャッシュ削除</button>
+          </div>
+          <div class="vault-actions">
+            <button id="copyDebugReportButton">デバッグ情報コピー</button>
+            <button id="runSelfCheckButton">自己診断を更新</button>
+          </div>
+          <p id="selfCheckStatus" class="status-line">未診断</p>
+        </div>
+
+        <div class="wizard-card">
+          <h2>ショートカット設定ウィザード</h2>
+          <p>使う決済を選ぶと、iPhoneショートカットに貼るURLを作れます。</p>
+          <div class="wizard-steps">
+            <button class="step-pill active" data-step="1">1 決済</button>
+            <button class="step-pill" data-step="2">2 URL</button>
+            <button class="step-pill" data-step="3">3 テスト</button>
+          </div>
+          <label>
+            決済テンプレート
+            <select id="paymentTemplateSelect"></select>
+          </label>
+          <div class="template-note" id="templateNote"></div>
+          <label>
+            生成URL
+            <textarea id="wizardUrlOutput" readonly></textarea>
+          </label>
+          <div class="vault-actions">
+            <button id="copyWizardUrlButton">URLをコピー</button>
+            <button id="testWizardUrlButton">このURLでテスト</button>
+          </div>
+        </div>
+
+        <div class="production-shortcut-card">
+          <div class="panel-title">
+            <h2>本番ショートカット化</h2>
+            <span class="muted-label">固定値の次</span>
+          </div>
+          <p>固定URLで追加できたら、下のURL内の3つの印をショートカット入力値へ差し替えます。</p>
+          <label>
+            差し替え用URL
+            <textarea id="productionShortcutUrl" readonly></textarea>
+          </label>
+          <div class="replacement-grid">
+            <div>
+              <strong>{{PROVIDER}}</strong>
+              <span>カード名、決済手段、または固定値 QUICPay / Suica など</span>
+            </div>
+            <div>
+              <strong>{{MERCHANT}}</strong>
+              <span>Wallet取引の加盟店名。取れない場合は確認待ちの店舗でも使えます。</span>
+            </div>
+            <div>
+              <strong>{{AMOUNT}}</strong>
+              <span>支払い金額。通貨記号なしの数字だけにします。</span>
+            </div>
+          </div>
+          <ol class="setup-steps">
+            <li>
+              <strong>固定URLで成功させる</strong>
+              <span>まず固定URLテストで1件追加できる状態にします。</span>
+            </li>
+            <li>
+              <strong>URLアクションへ貼る</strong>
+              <span>差し替え用URLをショートカットのURLアクションに貼ります。</span>
+            </li>
+            <li>
+              <strong>3つの値を変数へ置換</strong>
+              <span>{{PROVIDER}} / {{MERCHANT}} / {{AMOUNT}} をShortcut Inputの該当値に置き換えます。</span>
+            </li>
+            <li>
+              <strong>URLを開く</strong>
+              <span>次のアクションに「URLを開く」を置きます。URLアクションだけでは送信されません。</span>
+            </li>
+          </ol>
+          <div class="vault-actions">
+            <button id="copyProductionUrlButton">差し替えURLをコピー</button>
+            <button id="copyProductionStepsButton">手順をコピー</button>
+          </div>
+          <p id="productionShortcutStatus" class="status-line">未コピー</p>
+        </div>
+
+        <div class="shortcut-guide-card">
+          <div class="panel-title">
+            <h2>実機設定ガイド</h2>
+            <span class="muted-label">iPhone用</span>
+          </div>
+          <ol class="setup-steps">
+            <li>
+              <strong>ショートカットを開く</strong>
+              <span>iPhoneのショートカットアプリで「オートメーション」を開きます。</span>
+            </li>
+            <li>
+              <strong>Wallet取引トリガーを選ぶ</strong>
+              <span>対象カードやSuica/PASMOを選びます。まずは固定URLでテストします。</span>
+            </li>
+            <li>
+              <strong>URLを作る</strong>
+              <span>下の固定URLをコピーし、アクション「URL」に貼ります。</span>
+            </li>
+            <li>
+              <strong>URLを開く</strong>
+              <span>次のアクションに「URLを開く」を追加します。URLだけでは記録されません。</span>
+            </li>
+            <li>
+              <strong>Wallet値に差し替える</strong>
+              <span>固定URLテスト成功後、merchant / amount / provider をShortcut Inputの値へ差し替えます。</span>
+            </li>
+          </ol>
+          <label>
+            固定テストURL
+            <textarea id="setupGuideUrl" readonly></textarea>
+          </label>
+          <div class="vault-actions">
+            <button id="copySetupGuideUrlButton">固定URLをコピー</button>
+            <button id="openSetupGuideUrlButton">固定URLでテスト</button>
+          </div>
+          <div class="template-note">
+            追加されない場合は、オートメーションが有効か、「URL」アクションの次に「URLを開く」があるかを確認してください。
+          </div>
+        </div>
+
+        <div class="preflight-card">
+          <div class="panel-title">
+            <h2>実機プレリリース確認</h2>
+            <span class="muted-label" id="preflightProgress">0/6</span>
+          </div>
+          <p>iPhone SafariでGitHub Pages版を開いたら、上から順に確認します。結果はこの端末に保存されます。</p>
+          <div class="preflight-list" id="preflightList"></div>
+          <label>
+            公開URLメモ
+            <input id="publicUrlInput" placeholder="https://ユーザー名.github.io/App_PreRelease/" inputmode="url" />
+          </label>
+          <div class="vault-actions">
+            <button id="copyPreflightReportButton">確認結果をコピー</button>
+            <button id="resetPreflightButton">確認をリセット</button>
+          </div>
+          <p id="preflightStatus" class="status-line">未確認</p>
+        </div>
+
+        <div class="release-card">
+          <div class="panel-title">
+            <h2>プレリリース判定</h2>
+            <span class="muted-label" id="releaseReadinessLabel">確認中</span>
+          </div>
+          <p>自分だけで使い始める前に、初回セットアップ・実機確認・データ保護・更新状態をまとめて判定します。</p>
+          <div class="release-score" id="releaseScoreBox">
+            <strong id="releaseScoreValue">0%</strong>
+            <span id="releaseScoreText">確認待ち</span>
+          </div>
+          <div class="release-list" id="releaseReadinessList"></div>
+          <div class="vault-actions">
+            <button id="copyReleaseReportButton">判定レポートをコピー</button>
+            <button id="refreshReleaseCheckButton">判定を更新</button>
+          </div>
+          <p id="releaseReadinessStatus" class="status-line">未確認</p>
+        </div>
+
+        <div class="flow-card">
+          <div class="panel-title">
+            <h2>操作フロー確認</h2>
+            <span class="muted-label" id="flowCheckSummary">未確認</span>
+          </div>
+          <p>固定URL追加、暗号化保存、JSONバックアップ、フィードバック記録まで、自分用プレリリース前の流れを確認します。</p>
+          <div class="flow-list" id="flowCheckList"></div>
+          <div class="vault-actions">
+            <button id="runFlowCheckButton">通し確認を更新</button>
+            <button id="copyFlowCheckButton">通し確認をコピー</button>
+          </div>
+          <p id="flowCheckStatus" class="status-line">未確認</p>
+        </div>
+
+        <div class="package-card">
+          <div class="panel-title">
+            <h2>プレリリース手順パック</h2>
+            <span class="muted-label" id="packageSummary">準備中</span>
+          </div>
+          <p>GitHub Pages更新、iPhone側の最新版反映、初回セットアップ、バックアップ保管までを短い実行手順にまとめます。</p>
+          <div class="package-list" id="packageStepList"></div>
+          <div class="vault-actions">
+            <button id="copyPackageStepsButton">手順パックをコピー</button>
+            <button id="refreshPackageStepsButton">手順を更新</button>
+          </div>
+          <p id="packageStatus" class="status-line">未確認</p>
+        </div>
+
+        <div class="publish-card">
+          <div class="panel-title">
+            <h2>GitHub Pages公開前チェック</h2>
+            <span class="muted-label" id="publishSummary">準備中</span>
+          </div>
+          <p>push直前からiPhoneで開く直前までに確認する項目です。公開URL、キャッシュ更新、共有先、個人データ混入をまとめて見ます。</p>
+          <div class="publish-list" id="publishCheckList"></div>
+          <div class="vault-actions">
+            <button id="copyPublishCheckButton">公開前チェックをコピー</button>
+            <button id="refreshPublishCheckButton">公開前チェックを更新</button>
+          </div>
+          <p id="publishStatus" class="status-line">未確認</p>
+        </div>
+
+        <div class="audit-card">
+          <div class="panel-title">
+            <h2>公開前セルフ監査</h2>
+            <span class="muted-label" id="auditSummary">準備中</span>
+          </div>
+          <p>push直前の最終確認です。個人データを混ぜないこと、共有するURL、バックアップ、iPhoneでの更新確認をひとつずつ見ます。</p>
+          <div class="audit-list" id="auditCheckList"></div>
+          <div class="vault-actions">
+            <button id="copyAuditReportButton">セルフ監査をコピー</button>
+            <button id="refreshAuditButton">セルフ監査を更新</button>
+          </div>
+          <p id="auditStatus" class="status-line">未確認</p>
+        </div>
+
+        <div class="push-card">
+          <div class="panel-title">
+            <h2>GitHub Pages反映準備</h2>
+            <span class="muted-label" id="pushSummary">準備中</span>
+          </div>
+          <p>push対象を整理して、GitHub Pagesへ反映する直前の作業順に並べます。個人データを含めないことを前提に進めます。</p>
+          <div class="push-list" id="pushPrepList"></div>
+          <div class="vault-actions">
+            <button id="copyPushPrepButton">push準備をコピー</button>
+            <button id="refreshPushPrepButton">push準備を更新</button>
+          </div>
+          <p id="pushPrepStatus" class="status-line">未確認</p>
+        </div>
+
+        <div class="final-push-card">
+          <div class="panel-title">
+            <h2>最終push手順</h2>
+            <span class="muted-label" id="finalPushSummary">準備中</span>
+          </div>
+          <p>実行直前のコマンド順です。ステージング、コミット、push、iPhone確認までを短くまとめます。</p>
+          <div class="final-push-list" id="finalPushList"></div>
+          <div class="vault-actions">
+            <button id="copyFinalPushButton">最終手順をコピー</button>
+            <button id="refreshFinalPushButton">最終手順を更新</button>
+          </div>
+          <p id="finalPushStatus" class="status-line">未確認</p>
+        </div>
+
+        <div class="feedback-card">
+          <div class="panel-title">
+            <h2>実機フィードバック</h2>
+            <span class="muted-label" id="feedbackCountLabel">0件</span>
+          </div>
+          <p>自分で使って気づいた不具合、面倒な点、改善案を端末内に記録します。明細本文は入れず、あとで改善に回せる形にします。</p>
+          <form id="feedbackForm" class="feedback-form">
+            <label>
+              種類
+              <select id="feedbackTypeInput">
+                <option value="bug">不具合</option>
+                <option value="friction">使いにくい</option>
+                <option value="idea">改善案</option>
+                <option value="win">良かった点</option>
+              </select>
+            </label>
+            <label>
+              優先度
+              <select id="feedbackPriorityInput">
+                <option value="high">高</option>
+                <option value="medium" selected>中</option>
+                <option value="low">低</option>
+              </select>
+            </label>
+            <label class="feedback-note-field">
+              メモ
+              <textarea id="feedbackNoteInput" rows="3" placeholder="例: ホーム画面から開いた時に固定URLテストの場所が見つけにくい"></textarea>
+            </label>
+            <button type="submit">記録する</button>
+          </form>
+          <div class="feedback-list" id="feedbackList"></div>
+          <div class="vault-actions">
+            <button id="copyFeedbackButton">改善メモをコピー</button>
+            <button id="clearResolvedFeedbackButton">解決済みを削除</button>
+          </div>
+          <p id="feedbackStatus" class="status-line">未記録</p>
+        </div>
+
+        <div class="privacy-promise-card">
+          <h2>このアプリの差分</h2>
+          <ul>
+            <li>口座連携なし。金融機関ログイン情報を預かりません。</li>
+            <li>Walletタッチ決済はショートカットで即記録します。</li>
+            <li>PayPayなどQR決済は通知文やCSVから半自動で取り込みます。</li>
+            <li>明細は端末内保存。外部AIへ送りません。</li>
+            <li>無料運用を優先。広告を入れる場合も明細データを読ませません。</li>
+          </ul>
+        </div>
+
+        <div class="report-card">
+          <div class="panel-title">
+            <h2>月次レポート</h2>
+            <span class="muted-label">ローカル集計</span>
+          </div>
+          <div id="monthlyInsight" class="monthly-insight"></div>
+          <div id="monthlyDetailGrid" class="monthly-detail-grid"></div>
+          <div id="topCategoryList" class="top-category-list"></div>
+        </div>
+
+        <div class="budget-card">
+          <div class="panel-title">
+            <h2>カテゴリ予算</h2>
+            <span class="muted-label">端末内ルール</span>
+          </div>
+          <p>よく使うカテゴリだけ予算を入れると、月次レポートで使いすぎを検知します。</p>
+          <div id="budgetEditor" class="budget-editor"></div>
+          <div id="budgetAlertList" class="budget-alert-list"></div>
+        </div>
+
+        <div class="rule-card">
+          <div class="panel-title">
+            <h2>分類ルール</h2>
+            <span class="muted-label">自分用に学習</span>
+          </div>
+          <p>店舗名に含まれる文字とカテゴリを登録すると、次回から自動分類に使います。</p>
+          <form id="ruleForm" class="rule-form">
+            <label>
+              キーワード
+              <input id="ruleKeywordInput" placeholder="例: セブン, JR, 薬局" autocomplete="off" />
+            </label>
+            <label>
+              カテゴリ
+              <select id="ruleCategorySelect"></select>
+            </label>
+            <button type="submit">ルール追加</button>
+          </form>
+          <div id="customRuleList" class="custom-rule-list"></div>
+        </div>
+
+        <div class="sponsor-card">
+          <div class="panel-title">
+            <h2>無料運用モデル</h2>
+            <span class="muted-label">広告ポリシー</span>
+          </div>
+          <p>広告やスポンサー枠を入れる場合も、店舗名・金額・明細メモを広告事業者に渡さない設計にします。</p>
+          <label class="toggle-row">
+            <span>
+              スポンサー枠を表示
+              <small>取引データを使わない非追跡枠</small>
+            </span>
+            <input id="sponsorToggle" type="checkbox" checked />
+          </label>
+          <div class="sponsor-slot" id="sponsorSlot">
+            <strong>スポンサー枠サンプル</strong>
+            <span>家計改善に関係する一般的なお知らせだけを表示</span>
+          </div>
+          <div class="ad-safety-grid">
+            <div>
+              <strong>広告が読まない</strong>
+              <span>店舗名、金額、メモ、カテゴリ、支払い日時</span>
+            </div>
+            <div>
+              <strong>表示場所</strong>
+              <span>レポートや設定系の画面だけ</span>
+            </div>
+            <div>
+              <strong>禁止</strong>
+              <span>明細行の中、入力直後、エラー表示内</span>
+            </div>
+            <div>
+              <strong>将来候補</strong>
+              <span>広告非表示の小額応援プラン</span>
+            </div>
+          </div>
+          <ul>
+            <li>取引追加直後には広告を出しません。</li>
+            <li>明細に基づく追跡広告を使いません。</li>
+            <li>広告非表示の小額応援プランは将来候補です。</li>
+          </ul>
+        </div>
+
+        <div class="data-card">
+          <div class="panel-title">
+            <h2>データ管理</h2>
+            <span class="muted-label">持ち出し自由</span>
+          </div>
+          <p>無料で使い続けられるように、明細はいつでも自分の手元へ書き出せます。</p>
+          <div class="data-actions">
+            <button id="exportCsvButton">CSV出力</button>
+            <button id="exportJsonButton">JSONバックアップ</button>
+            <button id="importJsonButton">JSON復元</button>
+            <button id="copySummaryButton">月次サマリーコピー</button>
+            <button id="resetDebugDataButton">デバッグデータ削除</button>
+          </div>
+          <input id="importJsonInput" type="file" accept="application/json,.json" hidden />
+          <p id="dataStatus" class="status-line">未出力</p>
+        </div>
+
+        <div class="ops-card">
+          <div class="panel-title">
+            <h2>プレリリース運用</h2>
+            <span class="muted-label" id="opsHealthLabel">確認中</span>
+          </div>
+          <p>自分用に使い続けるための更新・バックアップ・復旧メモです。</p>
+          <div class="ops-grid" id="opsGrid"></div>
+          <div class="vault-actions">
+            <button id="markBackupButton">バックアップ済みにする</button>
+            <button id="copyRecoveryStepsButton">復旧手順をコピー</button>
+          </div>
+          <div class="vault-actions">
+            <button id="copyOpsReportButton">運用レポートコピー</button>
+            <button id="resetOpsButton">運用メモをリセット</button>
+          </div>
+          <p id="opsStatus" class="status-line">未確認</p>
+        </div>
+
         <div class="shortcut-card">
           <h2>ショートカットから送るJSON</h2>
-          <p>実機ではショートカットの「URLの内容を取得」で、この形式をアプリ/サーバーにPOSTします。</p>
+          <p>将来のネイティブ版やサーバー連携では、この形式のデータだけを扱う想定です。</p>
           <pre id="shortcutPayload"></pre>
         </div>
 
@@ -147,21 +615,22 @@
             <strong id="duplicateCount">0</strong>
           </div>
           <div>
-            <span>分類済み</span>
-            <strong id="classifiedRate">0%</strong>
-          </div>
-          <div>
             <span>確認待ち</span>
             <strong id="reviewCount">0</strong>
+          </div>
+          <div>
+            <span>分類率</span>
+            <strong id="classifiedRate">0%</strong>
           </div>
         </div>
 
         <div class="import-box">
-          <h2>CSV明細インポート</h2>
-          <p>PayPayや交通系ICの明細を貼り付けると、一括で候補登録します。</p>
-          <textarea id="csvInput" spellcheck="false">Suica,JR 新宿駅,198,交通費
+          <h2>CSV貼り付けテスト</h2>
+          <p>アプリ外で作ったメモやCSVを貼り付けて、まとめて取り込むための簡易テストです。</p>
+          <textarea id="csvInput" spellcheck="false">QUICPay,コンビニ 渋谷三丁目,680,食費
+Suica,JR 新宿駅,198,交通費
 PayPay,ドラッグストア 青山,1420,日用品
-QUICPay,カフェ 表参道,620,カフェ</textarea>
+楽天ペイ,カフェ 表参道,620,カフェ</textarea>
           <button id="importButton">CSVを取り込む</button>
         </div>
       </aside>
@@ -169,22 +638,21 @@ QUICPay,カフェ 表参道,620,カフェ</textarea>
 
     <template id="ledgerItemTemplate">
       <li class="ledger-item">
-        <div class="provider-badge"></div>
-        <div class="ledger-main">
-          <div class="ledger-topline">
-            <strong class="merchant"></strong>
-            <span class="category"></span>
+        <div class="merchant-row">
+          <span class="provider-badge"></span>
+          <div>
+            <strong class="merchant-name"></strong>
+            <p class="memo"></p>
           </div>
-          <p class="meta"></p>
-          <label class="category-edit">
-            カテゴリ
-            <select class="category-select"></select>
-          </label>
+          <strong class="amount"></strong>
         </div>
-        <strong class="amount"></strong>
+        <label>
+          カテゴリ
+          <select class="category-select"></select>
+        </label>
       </li>
     </template>
 
-    <script src="./app.js"></script>
+    <script src="./app.js?v=20260614-final-push"></script>
   </body>
 </html>

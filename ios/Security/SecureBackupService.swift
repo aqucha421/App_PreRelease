@@ -17,6 +17,9 @@ struct LedgerBackupPayload: Codable {
     let exportedAt: Date
     let transactions: [LedgerTransaction]
     let merchantCategoryMemory: [String: LedgerCategory]
+    let customCategoryRules: [CustomCategoryRule]
+    let categoryBudgets: [CategoryBudget]
+    let settings: LedgerSettings
 }
 
 enum SecureBackupError: Error {

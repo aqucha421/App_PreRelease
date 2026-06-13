@@ -5,6 +5,9 @@ struct LocalLedgerSnapshot: Codable {
     let version: Int
     let transactions: [LedgerTransaction]
     let merchantCategoryMemory: [String: LedgerCategory]
+    let customCategoryRules: [CustomCategoryRule]
+    let categoryBudgets: [CategoryBudget]
+    let settings: LedgerSettings
     let duplicateCount: Int
     let savedAt: Date
 }

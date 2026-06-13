@@ -2,7 +2,7 @@
 
 ## Decision
 
-v1はSwiftUIネイティブアプリとして作る。
+公開版v1はSwiftUIネイティブアプリを目標にする。ただし、Macなしで自分用プレリリースを回す間はPWAを実用版の土台にする。
 
 ## Why
 
@@ -14,6 +14,11 @@ v1はSwiftUIネイティブアプリとして作る。
 ## Build Constraint
 
 ユーザーはMacを使っていないため、WindowsだけではApp Store提出用のXcode archiveを作れない。
+
+そのため、短期の到達点は次の2段階に分ける。
+
+- Phase A: PWAをGitHub Pagesで公開し、自分のiPhoneでホーム画面追加して使う
+- Phase B: Mac環境を確保できた時点で、PWA仕様をSwiftUIへ移植する
 
 ## Recommended Build Path
 
@@ -51,10 +56,12 @@ v1はSwiftUIネイティブアプリとして作る。
 - `CategoryClassifier`
   - 店舗名ルール分類
   - 手動修正の学習
+  - ユーザー定義キーワードルール
 
 - `ShortcutIntake`
   - ショートカットからの入力
   - JSON/パラメータ検証
+  - URL Schemeを初期実装、App Intentsを昇格候補にする
 
 - `Import`
   - QR通知文パース
@@ -64,11 +71,13 @@ v1はSwiftUIネイティブアプリとして作る。
   - 端末内保存
   - 暗号化バックアップ
   - 復元
+  - 予算、分類ルール、スポンサー表示設定も保存対象に含める
 
 - `Settings`
   - データ削除
   - プライバシー表示
   - ショートカット設定ガイド
+  - 非追跡スポンサー枠の説明
 
 ## First Native Implementation Target
 
@@ -86,10 +95,27 @@ v1はSwiftUIネイティブアプリとして作る。
 - `CategoryClassifier`
 - `DuplicateDetector`
 - `QRCodePaymentParser`
+- `CategoryBudget`
+- `CustomCategoryRule`
+- `SecureBackupService`
+
+## Native Parity Requirements
+
+PWA v0.8.1からSwiftUIへ移すとき、最低限そろえる項目:
+
+- QUICPay / iD / Suica / PASMOのショートカット取り込み
+- PayPay / 楽天ペイ / d払い / au PAY / メルペイの通知文パース
+- 店舗カテゴリ記憶とユーザー定義ルール
+- カテゴリ予算と月次レポート
+- JSONまたは暗号化バックアップの復元
+- データ削除
+- 取引明細を開発者サーバーへ送らない設計
+- 広告またはスポンサーを入れる場合も、店舗名・金額・メモ・カテゴリ・時刻を広告側に渡さない設計
 
 ## Open Questions
 
 - Apple Developer Program登録を個人名義で行うか、事業者名義で行うか
 - Mac環境をどう確保するか
-- v1を無料にするか、有料/サブスクにするか
+- v1を完全無料にするか、任意応援プランを付けるか
 - 同期なしでリリースするか、暗号化バックアップだけ入れるか
+- ネイティブ版でもスポンサー枠を残すか

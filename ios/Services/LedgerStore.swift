@@ -5,6 +5,9 @@ final class LedgerStore: ObservableObject {
     @Published private(set) var transactions: [LedgerTransaction] = []
     @Published private(set) var duplicateCount = 0
     @Published var merchantCategoryMemory: [String: LedgerCategory] = [:]
+    @Published var customCategoryRules: [CustomCategoryRule] = []
+    @Published var categoryBudgets: [CategoryBudget] = []
+    @Published var settings: LedgerSettings = .defaultValue
 
     private let parser = QRCodePaymentParser()
     private let duplicateDetector = DuplicateDetector()
@@ -32,7 +35,7 @@ final class LedgerStore: ObservableObject {
     }
 
     func addWalletTransaction(provider: PaymentProvider, merchant: String, amount: Int) {
-        let classifier = CategoryClassifier(memory: merchantCategoryMemory)
+        let classifier = CategoryClassifier(memory: merchantCategoryMemory, customRules: customCategoryRules)
         let transaction = LedgerTransaction(
             provider: provider,
             merchant: merchant,
@@ -46,7 +49,7 @@ final class LedgerStore: ObservableObject {
 
     func addQRText(_ text: String) {
         let parsed = parser.parse(text)
-        let classifier = CategoryClassifier(memory: merchantCategoryMemory)
+        let classifier = CategoryClassifier(memory: merchantCategoryMemory, customRules: customCategoryRules)
         let transaction = LedgerTransaction(
             provider: parsed.provider,
             merchant: parsed.merchant,
@@ -68,7 +71,7 @@ final class LedgerStore: ObservableObject {
                 let merchant = cells[1]
                 let amount = Int(cells[2]) ?? 0
                 let category = cells.count >= 4 ? LedgerCategory(rawValue: cells[3]) : nil
-                let classifier = CategoryClassifier(memory: merchantCategoryMemory)
+                let classifier = CategoryClassifier(memory: merchantCategoryMemory, customRules: customCategoryRules)
                 add(
                     LedgerTransaction(
                         provider: provider,
@@ -93,10 +96,37 @@ final class LedgerStore: ObservableObject {
         persist()
     }
 
+    func addCustomCategoryRule(keyword: String, category: LedgerCategory) {
+        let normalizedKeyword = keyword.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalizedKeyword.isEmpty else {
+            return
+        }
+
+        customCategoryRules.removeAll { $0.keyword.localizedCaseInsensitiveCompare(normalizedKeyword) == .orderedSame }
+        customCategoryRules.insert(CustomCategoryRule(keyword: normalizedKeyword, category: category), at: 0)
+        persist()
+    }
+
+    func updateBudget(for category: LedgerCategory, monthlyLimit: Int) {
+        categoryBudgets.removeAll { $0.category == category }
+        if monthlyLimit > 0 {
+            categoryBudgets.append(CategoryBudget(category: category, monthlyLimit: monthlyLimit))
+        }
+        persist()
+    }
+
+    func setSponsorVisible(_ isVisible: Bool) {
+        settings.sponsorVisible = isVisible
+        persist()
+    }
+
     func deleteAll() {
         transactions.removeAll()
         duplicateCount = 0
         merchantCategoryMemory.removeAll()
+        customCategoryRules.removeAll()
+        categoryBudgets.removeAll()
+        settings = .defaultValue
         try? repository.deleteAll()
     }
 
@@ -120,6 +150,9 @@ final class LedgerStore: ObservableObject {
             }
             transactions = snapshot.transactions
             merchantCategoryMemory = snapshot.merchantCategoryMemory
+            customCategoryRules = snapshot.customCategoryRules
+            categoryBudgets = snapshot.categoryBudgets
+            settings = snapshot.settings
             duplicateCount = snapshot.duplicateCount
         } catch {
             // In the production app, surface a non-sensitive recovery message.
@@ -157,6 +190,9 @@ final class LedgerStore: ObservableObject {
             version: 1,
             transactions: transactions,
             merchantCategoryMemory: merchantCategoryMemory,
+            customCategoryRules: customCategoryRules,
+            categoryBudgets: categoryBudgets,
+            settings: settings,
             duplicateCount: duplicateCount,
             savedAt: Date()
         )
